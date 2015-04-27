@@ -15,18 +15,16 @@ Welcome to the Sales Channel interface documentation of the **AlletidersAPI.dk**
 
 + PCM-* (Product Channel Manager) => AlletidersAPI
 + Combine Product & Event Booking => AlletidersAPI
-# Group Orders
 
-Channel ID is only required when you intend to create an order - that is only for POST request.
+# Group Orders
 
 ## Orders [/channel/order]
 ### Create a New Order [POST]
 
 Create a new order. All attributes are optional in the initial call. Lower the amount of API requests by specifying parameters initially. Sets a session cookie.
 
-+ Parameter
++ Parameters
 
-    + currency: `DKK` (string, optional) - The currency to use in ISO 4217 format.
     + reserve (boolean, optional) - Indicates that after this update, the order must be reserved. Only applicable if order price = 0
     + complete (boolean, optional) - Indicates that the order was placed externally and is not using the internal payment processing.
     + cancel (boolean, optional) - Indicates that this order has to be cancelled.
@@ -35,6 +33,13 @@ Create a new order. All attributes are optional in the initial call. Lower the a
     + reason (string, optional) - Message with why the order is cancelled. Only used with the cancel parameter.
     + address (Address, optional) - Shipping address
     + products (array[Product], optional) - A collection of products that you wish to add to the order.
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 201
 
@@ -44,15 +49,21 @@ Create a new order. All attributes are optional in the initial call. Lower the a
 
 ## Order [/channel/order/{orderId}]
 
-+ Parameter
++ Parameters
     + orderId (number, optional) - The order ID. If not specified it will be retrieved from the session
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 ### Update Order Contents [PUT]
 
 Updates an order, setting currency, address, orderlines etc. The order is identified via a session cookie. It is only possible to perform this request after "Create a New Order" has been called and until the next "Create a New order" call.
 
-+ Parameter
-    + currency: `DKK` (string, optional) - The currency to use in ISO 4217 format.
++ Parameters
     + reserve (boolean, optional) - Indicates that after this update, the order must be reserved. Only applicable if order price = 0
     + complete (boolean, optional) - Indicates that order was placed externally and it is not using the internal payment processing.
     + cancel (boolean, optional) - Indicates that this order has to be cancelled.
@@ -61,6 +72,12 @@ Updates an order, setting currency, address, orderlines etc. The order is identi
     + reason (string, optional) - Message with why the order is cancelled. Only used with the cancel parameter.
     + address (Address, optional)
     + products (array[Product], optional)
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 200
 
@@ -351,8 +368,6 @@ Retrieves all the information about the order, including order details, currency
 
 ## Order Lines [/channel/order-line]
 
-Channel ID is not required for this resource.
-
 ### Get Order Lines [GET]
 
 Retrieves all the items in the order. The order is identified via session cookie. Data structure is the same as orderlines entry in the order.
@@ -439,7 +454,6 @@ Delete order line
 
 + Parameters
     + id (number, required) - Orderline ID to be deleted
-    + channel (string, required) - The name of the channel.
     + language: `en` (string, optional) - Language to use in ISO 639-1 standard
         + Default: `da`
     + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
