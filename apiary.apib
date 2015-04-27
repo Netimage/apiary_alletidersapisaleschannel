@@ -3,19 +3,18 @@ HOST: https://alletidersapi.dk
 
 # AlletidersAPI.dk
 
-Welcome to the **AlletidersAPI.dk** API.
+Welcome to the Sales Channel interface documentation of the **AlletidersAPI.dk** API.
 
-Useful Links
+## Useful Links
+
 + [Documentation](http://docs.alletidersapi.dk/)
 + [System Overview](http://docs.alletidersapi.dk/overview/)
++ [Provider Documentation](http://docs.alletidersapiprovider.apiary.io/)
 
-Title: Sales Channel interface for AlletidersAPI.dk
+## Corrections:
 
-Rettelser:
-==========
-PCM-* (Product Channel Manager) => AlletidersAPI
-Combine Product & Event Booking => AlletidersAPI
-
++ PCM-* (Product Channel Manager) => AlletidersAPI
++ Combine Product & Event Booking => AlletidersAPI
 # Group Orders
 
 Channel ID is only required when you intend to create an order - that is only for POST request.
@@ -440,6 +439,13 @@ Delete order line
 
 + Parameters
     + id (number, required) - Orderline ID to be deleted
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 200
 
@@ -466,6 +472,13 @@ Retrieve payment action url and required form fields. The data received is only 
     + continueUrl (string, required) - Absolute url of where to redirect user after completing payment
     + cancelUrl (string, required) - Absolute url of where to redirect user after cancelling payment
     + ip (string, required) - Client IP address
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 200 (application/xml)
 
@@ -683,6 +696,13 @@ Retrieve a list of popular products.
         + Default: 15
     + city (number, optional) - City id to filter providers that product belongs to.
     + theme (number, optional) - Theme id to filter products.
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 200 (application/xml)
 
@@ -790,6 +810,13 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
             Otherwise result is not affected.
         + Default: -1
     + includeAllotments (number, optional) - Indicates if the resulting products will have allotments in-lined according to the startDate and endDate.
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 
 + Response 200 (application/xml)
@@ -1067,6 +1094,13 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
 
 + Parameters
     + id (number, required) - The product ID
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 200 (application/xml)
 
@@ -1152,6 +1186,13 @@ Retrieve a list of product allotments.
         + Default: 0
     + limit (number, optional) - Number of allotments to return.
         + Default: 7
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 200 (application/xml)
 
@@ -1341,6 +1382,13 @@ Retrieve a list of product providers. Optionally filtering by city and products 
     + having (optional, array[string]) ... An array or comma separated values specifying product types. Only providers having at least one product of each given type is returned. Available types: accommodation
         + Values
             + `accommodation`
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 200 (application/xml)
 
@@ -1450,6 +1498,13 @@ Retrieve provider details
     + type (optional, string) ... If this is set to ‘product’, id is treated as product id. In other words, provider is found by product.
         + Values
             + `product`
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 200 (application/xml)
 
@@ -1465,6 +1520,12 @@ Retrieve provider details
                     <latitude>-0.000000000029045075507383443</latitude>
                     <longitude>-1.8041802729387393e230</longitude>
                 </coords>
+                <links>
+                        <link lang="da" type="local">http://google.dk</link>
+                        <link lang="en" type="local">http://google.com</link>
+                        <link lang="da" type="national">http://yahoo.dk</link>
+                        <link lang="en" type="national">http://yahoo.com</link>
+                </links>
                 <images>
                     <image>
                         <thumb>http://dev.alletidersapi.com/upload/00/000/thumbs/006.png</thumb>
@@ -1487,6 +1548,28 @@ Retrieve provider details
                 "coords":{
                     "latitude":"-0.000000000029045075507383443",
                     "longitude":"-1.8041802729387393e230"
+                },
+                "links":{
+                        "link":{
+                                "lang":"da",
+                                "type":"local",
+                                "link":"http://google.dk"
+                        },
+                        "link":{
+                                "lang":"en",
+                                "type":"local",
+                                "link":"http://google.com"
+                        },
+                        "link":{
+                                "lang":"da",
+                                "type":"national",
+                                "link":"http://yahoo.dk"
+                        },
+                        "link":{
+                                "lang":"en",
+                                "type":"national",
+                                "link":"http://yahoo.com"
+                        },
                 },
                 "images":[
                     {
@@ -1562,6 +1645,13 @@ Retrieve a list of routes used by trip planner.
 
 + Parameters
     + concept (number, optional) - Concept ID. If omitted, the first concept is located and its routes are returned.
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 200 (application/xml)
 
@@ -1597,7 +1687,14 @@ Retrieve a list of routes used by trip planner.
 Retrieve route details.
 
 + Parameters
-+ r   outeId (number, required) - Route ID
+    + routeId (number, required) - Route ID
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 200 (application/xml)
 
@@ -1791,6 +1888,13 @@ Retrieve identity details
 
 + Parameters
     + barcode (number, required) - Ticket barcode
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 200 (application/xml)
 
@@ -1867,6 +1971,13 @@ Possible error codes:
         + Values
             + `scan`
             + `check`
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 200 (application/xml)
 
@@ -2065,8 +2176,16 @@ Retrieve a list of supported languages.
 Retrieve related products to products added to the shopping cart. The products are chosen by theme and city where theme has a priority. If there are no products from the same theme and city, then any other products will be returned. Products are returned randomly and there will not be the same products returned as in the shopping cart.
 
 + Parameters
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
     + limit (number, optional) - Maximum number of related products to return.
         + Default: 4
+
 
 + Response 200 (application/xml)
 
