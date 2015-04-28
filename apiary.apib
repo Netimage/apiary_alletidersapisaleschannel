@@ -16,6 +16,69 @@ Welcome to the Sales Channel interface documentation of the **AlletidersAPI.dk**
 + PCM-* (Product Channel Manager) => AlletidersAPI
 + Combine Product & Event Booking => AlletidersAPI
 
+
+## Document purpose
+
+This document describes the API between sales channels and Alletiders API.
+
+## RESTful service
+
+Alletiders API implements CRUD functionality on a series of resources allowing search of products, shopping cart and payment interactions. Enabling POS systems to display and make sales of products from various product providers.
+
+
+## Security, authorization and identity
+
+The sales channel client is expected to use https and basic authentication.
+
+## HTTP session
+
+Order and payment interactions require session support from the channel client.
+
+## Input and Output formats
+
+Data is available in JSON or XML formats.
+All input parameters have to be passed as url encoded form - either in query string or POST/PUT data.
+Presented examples contains additional white space for better readability, this is not the case for actual responses.
+
+## Currency format
+
+All prices in the responses are in cents, (currency * 100) to avoid rounding errors. Divide received numbers by 100 and format it before showing it to the user.
+All input values that are to be used as currency have to be multiplied by 100.
+
+## Error handling
+
+If an exception occurs in any request, a special content is returned. This content will be either HTML, JSON, or XML and will depend on the current format. The content will include the actual error message and all exception information, including stack trace serialized to appropriate format. The stack trace and the error message as a whole is very useful for error investigation, please keep it, if you need to communicate with Combine about possible errors. The sales channel should be looking at the message(text in bold).
+For example:
+
+XML
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<error application="Product Channel Manager (PCM)">
+   <message>The requested page was not found</message>
+   <exception>
+      <message>Invalid controller specified (membuy)</message>
+      <code>0</code>
+      <stacktrace>
+        ...
+      </stacktrace>
+   </exception>
+</error>
+```
+
+JSON
+```json
+{
+   "application":"Product Channel Manager (PCM)",
+   "message":"The requested page was not found",
+   "exception":{
+      "message":"Invalid controller specified (membuy)",
+      "code":0,
+      "stacktrace":[ … ]
+   }
+}
+```
+
+
 # Group Orders
 
 ## Orders [/channel/order]
@@ -24,6 +87,15 @@ Welcome to the Sales Channel interface documentation of the **AlletidersAPI.dk**
 Create a new order. All attributes are optional in the initial call. Lower the amount of API requests by specifying parameters initially. Sets a session cookie.
 
 + Parameters
+
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
+
++ Attributes
 
     + reserve (boolean, optional) - Indicates that after this update, the order must be reserved. Only applicable if order price = 0
     + complete (boolean, optional) - Indicates that the order was placed externally and is not using the internal payment processing.
@@ -34,12 +106,6 @@ Create a new order. All attributes are optional in the initial call. Lower the a
     + address (Address, optional) - Shipping address
     + products (array[Product], optional) - A collection of products that you wish to add to the order.
     + channel (string, required) - The name of the channel.
-    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
-        + Default: `da`
-    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
-        + Default: `DKK`
-    + format: `xml` (string, optional) - Either json or xml.
-        + Default: `json`
 
 + Response 201
 
@@ -48,10 +114,14 @@ Create a new order. All attributes are optional in the initial call. Lower the a
             Location: /channel/order/{orderId}
 
 ## Order [/channel/order/{orderId}]
+### Update Order Contents [PUT]
 
-+ Parameters
+Updates an order, setting currency, address, orderlines etc. The order is identified via a session cookie. It is only possible to perform this request after "Create a New Order" has been called and until the next "Create a New order" call.
+
+**Note that all orderlines are deleted when currency is changed!**
+
++ Properties
     + orderId (number, optional) - The order ID. If not specified it will be retrieved from the session
-    + channel (string, required) - The name of the channel.
     + language: `en` (string, optional) - Language to use in ISO 639-1 standard
         + Default: `da`
     + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
@@ -59,11 +129,7 @@ Create a new order. All attributes are optional in the initial call. Lower the a
     + format: `xml` (string, optional) - Either json or xml.
         + Default: `json`
 
-### Update Order Contents [PUT]
-
-Updates an order, setting currency, address, orderlines etc. The order is identified via a session cookie. It is only possible to perform this request after "Create a New Order" has been called and until the next "Create a New order" call.
-
-+ Parameters
++ Attributes
     + reserve (boolean, optional) - Indicates that after this update, the order must be reserved. Only applicable if order price = 0
     + complete (boolean, optional) - Indicates that order was placed externally and it is not using the internal payment processing.
     + cancel (boolean, optional) - Indicates that this order has to be cancelled.
@@ -72,18 +138,10 @@ Updates an order, setting currency, address, orderlines etc. The order is identi
     + reason (string, optional) - Message with why the order is cancelled. Only used with the cancel parameter.
     + address (Address, optional)
     + products (array[Product], optional)
-    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
-        + Default: `da`
-    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
-        + Default: `DKK`
-    + format: `xml` (string, optional) - Either json or xml.
-        + Default: `json`
 
-+ Response 200
++ Response 205
 
-    + Body
-
-            + Response 200 (application/xml)
+Response 200 (application/xml)
 
     + Body
 
@@ -221,13 +279,18 @@ Updates an order, setting currency, address, orderlines etc. The order is identi
             }
 
 ### Get Order Details [GET]
+
 Retrieves all the information about the order, including order details, currency, order lines, order fees and the address. The order itself is identified via session cookie. It is only possible to perform this request after "Create a New Order" has been called and until the next "Create a New order" call.
 
-+ receipt (string) - Hash that can be used to show order receipt to the customer. It includes orderlines, tickets, and terms and conditions. If the order is not ready yet, it will show a “splash” page that will keep refreshing. It is meant to be accessed directly by the user. Url is as follows: order-receipt/{order.receipt} (no ‘channel’ in the beginning). The same url will be included in the email confirmation(if one is sent)
-+ paymentType (string) - Either full or fee
-+ cost (number) - cost of the order, based on product prices in sales agreements, always in DKK
-+ isReady (boolean) - Indicates whether the order is completed and ticket identities were received/generated. It is safe to poll this resource.
-+ isCancelled (boolean) - Indicates if the order was cancelled
+#### Response description
+
+|Field|Description|
+|---|---|
+|receipt|Hash that can be used to show order receipt to the customer. It includes orderlines, tickets, and terms and conditions. If the order is not ready yet, it will show a “splash” page that will keep refreshing. It is meant to be accessed directly by the user. Url is as follows: order-receipt/{order.receipt} (no ‘channel’ in the beginning). The same url will be included in the email confirmation(if one is sent)|
+|paymentType|Either full or fee|
+|cost|cost of the order, based on product prices in sales agreements, always in DKK|
+|isReady|Indicates whether the order is completed and ticket identities were received/generated. It is safe to poll this resource.|
+|isCancelled|Indicates if the order was cancelled|
 
 + Response 200 (application/xml)
 
@@ -463,8 +526,6 @@ Delete order line
 
 + Response 200
 
-# Group Payments
-
 ## Payment Transactions [/channel/payment-transaction]
 ### Create a new Payment Transaction [POST]
 
@@ -480,6 +541,8 @@ Create a new payment transaction. Call this when user intends to pay for the ord
 ### Get Payment URL and Form Fields [GET]
 
 Retrieve payment action url and required form fields. The data received is only supposed to be used as is and result in a form that the user can submit. The action specified in response must be set as html form action, so the user would be directed to payment gateway. Any modification to form fields will result in an error in payment gateway.
+
+The data received is only supposed to be used as is and result in a form that the user can submit. The action specified in response must be set as html form action, so the user would be directed to payment gateway. Any modification to form fields will result in an error in payment gateway.
 
 + Parameters
     + transactionId (number, required) - The transaction ID
@@ -550,250 +613,7 @@ This resource is only supposed to process data received from the QuickPay paymen
 
 + Response 200
 
-# Group Currency
-
-## Supported Currencies [/channel/currency]
-### Get supported currencies [GET]
-
-Retrieve a list of supported currencies.
-
-+ Response 200 (application/xml)
-
-    + Body
-
-            <?xml version="1.0" encoding="UTF-8"?>
-            <currencies xmlns="http://netimage.dk/pcm/channel/currency">
-                <currency id="1">DKK</currency>
-                <currency id="2">EUR</currency>
-                <currency id="3">USD</currency>
-                <currency id="4">SEK</currency>
-                <currency id="5">NOK</currency>
-            </currencies>
-
-+ Response 200 (application/json)
-
-    + Body
-
-            [
-                {
-                    "id":1,
-                    "currency":"DKK"
-                },
-                {
-                    "id":2,
-                    "currency":"EUR"
-                },
-                {
-                    "id":3,
-                    "currency":"USD"
-                },
-                {
-                    "id":4,
-                    "currency":"SEK"
-                },
-                {
-                    "id":5,
-                    "currency":"NOK"
-                }
-            ]
-
-# Group City
-
-## Cities [/channel/city]
-### Get City List [GET]
-
-Retrieve a list of cities that have at least one product for sale at this point in time. Product can be filtered using values from this resource.
-
-+ Response 200 (application/xml)
-
-    + Body
-
-            <?xml version="1.0" encoding="UTF-8"?>
-            <cities xmlns="http://netimage.dk/pcm/channel/city">
-                <city id="2439">
-                    <title>Gilleleje</title>
-                </city>
-                <city id="2471">
-                    <title>Helsinge</title>
-                </city>
-                <city id="2344">
-                    <title>Helsingør</title>
-                </city>
-                <city id="2298">
-                    <title>Hillerød</title>
-                </city>
-                <city id="2319">
-                    <title>Slangerup</title>
-                </city>
-            </cities>
-
-+ Response 200 (application/json)
-
-    + Body
-            {
-               "2439":{
-                    "id":2439,
-                    "title":"Gilleleje"
-                },
-               "2471":{
-                    "id":2471,
-                    "title":"Helsinge"
-                },
-               "2344":{
-                    "id":2344,
-                    "title":"Helsing\u00f8r"
-                },
-               "2298":{
-                    "id":2298,
-                    "title":"Hiller\u00f8d"
-               },
-               "2319":{
-                    "id":2319,
-                    "title":"Slangerup"
-                }
-            }
-
-# Group Theme
-
-## Themes [/channel/theme]
-### Get List of Themes [GET]
-
-Retrieve a list of active themes. Products can be filtered using values from this resource. Each product can belong to multiple themes.
-
-+ Response 200 (application/xml)
-
-    + Body
-
-            <?xml version="1.0" encoding="UTF-8"?>
-            <themes xmlns="http://netimage.dk/pcm/channel/theme">
-                <theme id="1">
-                    <name>Theme 1</name>
-                    <descriptionShort></descriptionShort>
-                    <descriptionLong></descriptionLong>
-                </theme>
-                <theme id="2">
-                    <name>Theme 2</name>
-                    <descriptionShort></descriptionShort>
-                    <descriptionLong></descriptionLong>
-                </theme>
-            </themes>
-
-+ Response 200 (application/json)
-
-    + Body
-
-            {
-                "1":{
-                    "id":1,
-                    "name":"Theme 1",
-                    "descriptionShort":"",
-                    "descriptionLong":""
-                },
-                "2":{
-                    "id":2,
-                    "name":"Theme 2",
-                    "descriptionShort":"",
-                    "descriptionLong":""
-                }
-            }
-# Group Popular Product
-
-## Popular Products [/channel/popular-product?limit={limit}&days={days}&city={city}&theme={theme}}]
-### Get Popular Products [GET]
-
-Retrieve a list of popular products.
-
-+ Parameters
-    + limit (number, optional) - Maximum number of popular products to find.
-        + Default: 5
-    + days (number, optional) - Number of days to look in the past.
-        + Default: 15
-    + city (number, optional) - City id to filter providers that product belongs to.
-    + theme (number, optional) - Theme id to filter products.
-    + channel (string, required) - The name of the channel.
-    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
-        + Default: `da`
-    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
-        + Default: `DKK`
-    + format: `xml` (string, optional) - Either json or xml.
-        + Default: `json`
-
-+ Response 200 (application/xml)
-
-    + Body
-     
-            <?xml version="1.0" encoding="UTF-8"?>
-            <popularProducts xmlns="http://netimage.dk/pcm/channel/popular-product">
-                <popularProduct id="18" providerId="10">
-                    <title>Entrebillet - Det Tekniske Museum - 1 Voksen</title>
-                    <lastSaleDate>2013-02-26T14:40:58+01:00</lastSaleDate>
-                    <numberOfSales>44</numberOfSales>
-                </popularProduct>
-                <popularProduct id="10" providerId="9">
-                    <title>1 dags leje af voksencykel (herre)</title>
-                    <lastSaleDate>2013-02-26T14:40:58+01:00</lastSaleDate>
-                    <numberOfSales>30</numberOfSales>
-                </popularProduct>
-                <popularProduct id="11" providerId="9">
-                    <title>1 dags leje af voksencykel (dame)</title>
-                    <lastSaleDate>2013-02-26T14:40:58+01:00</lastSaleDate>
-                    <numberOfSales>27</numberOfSales>
-                </popularProduct>
-                <popularProduct id="12" providerId="9">
-                    <title>1 dags leje af barnecykel (pige)</title>
-                    <lastSaleDate>2013-02-26T14:40:58+01:00</lastSaleDate>
-                    <numberOfSales>24</numberOfSales>
-                </popularProduct>
-                <popularProduct id="25" providerId="17">
-                    <title>Enkeltværelse</title>
-                    <lastSaleDate>2013-02-26T14:30:12+01:00</lastSaleDate>
-                    <numberOfSales>18</numberOfSales>
-                </popularProduct>
-            </popularProducts>
-
-+ Response 200 (application/json)
-
-    + Body
-
-            [
-                {
-                    "id":18,
-                    "title":"Entrebillet - Det Tekniske Museum - 1 Voksen",
-                    "lastSaleDate":"2013-02-26T14:40:58+01:00",
-                    "numberOfSales":"44",
-                    "providerId":10
-                },
-                {
-                    "id":10,
-                    "title":"1 dags leje af voksencykel (herre)",
-                    "lastSaleDate":"2013-02-26T14:40:58+01:00",
-                    "numberOfSales":"30",
-                    "providerId":9
-                },
-                {
-                    "id":11,
-                    "title":"1 dags leje af voksencykel (dame)",
-                    "lastSaleDate":"2013-02-26T14:40:58+01:00",
-                    "numberOfSales":"27",
-                    "providerId":9
-                },
-                {
-                    "id":12,
-                    "title":"1 dags leje af barnecykel (pige)",
-                    "lastSaleDate":"2013-02-26T14:40:58+01:00",
-                    "numberOfSales":"24",
-                    "providerId":9
-                },
-                {
-                    "id":25,
-                    "title":"Enkeltv\u00e6relse",
-                    "lastSaleDate":"2013-02-26T14:30:12+01:00",
-                    "numberOfSales":"18",
-                    "providerId":17
-                }
-            ]
-
-# Group Product
+# Group Products
 
 ## Search Products [/channel/product/?types={types}&city={city}&theme={theme}&provider={provider}&ids={ids}&offset={offset}&limit={limit}&startDate={startDate}&endDate={endDate}&modified={modified}&random={random}&accommodations={accommodations}&includeAllotments={includeAllotments}]
 ### Get Product List [GET]
@@ -1189,6 +1009,101 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
                 ]
             }
 
+## Popular Products [/channel/popular-product?limit={limit}&days={days}&city={city}&theme={theme}}]
+### Get Popular Products [GET]
+
+Retrieve a list of popular products.
+
++ Parameters
+    + limit (number, optional) - Maximum number of popular products to find.
+        + Default: 5
+    + days (number, optional) - Number of days to look in the past.
+        + Default: 15
+    + city (number, optional) - City id to filter providers that product belongs to.
+    + theme (number, optional) - Theme id to filter products.
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
+
++ Response 200 (application/xml)
+
+    + Body
+     
+            <?xml version="1.0" encoding="UTF-8"?>
+            <popularProducts xmlns="http://netimage.dk/pcm/channel/popular-product">
+                <popularProduct id="18" providerId="10">
+                    <title>Entrebillet - Det Tekniske Museum - 1 Voksen</title>
+                    <lastSaleDate>2013-02-26T14:40:58+01:00</lastSaleDate>
+                    <numberOfSales>44</numberOfSales>
+                </popularProduct>
+                <popularProduct id="10" providerId="9">
+                    <title>1 dags leje af voksencykel (herre)</title>
+                    <lastSaleDate>2013-02-26T14:40:58+01:00</lastSaleDate>
+                    <numberOfSales>30</numberOfSales>
+                </popularProduct>
+                <popularProduct id="11" providerId="9">
+                    <title>1 dags leje af voksencykel (dame)</title>
+                    <lastSaleDate>2013-02-26T14:40:58+01:00</lastSaleDate>
+                    <numberOfSales>27</numberOfSales>
+                </popularProduct>
+                <popularProduct id="12" providerId="9">
+                    <title>1 dags leje af barnecykel (pige)</title>
+                    <lastSaleDate>2013-02-26T14:40:58+01:00</lastSaleDate>
+                    <numberOfSales>24</numberOfSales>
+                </popularProduct>
+                <popularProduct id="25" providerId="17">
+                    <title>Enkeltværelse</title>
+                    <lastSaleDate>2013-02-26T14:30:12+01:00</lastSaleDate>
+                    <numberOfSales>18</numberOfSales>
+                </popularProduct>
+            </popularProducts>
+
++ Response 200 (application/json)
+
+    + Body
+
+            [
+                {
+                    "id":18,
+                    "title":"Entrebillet - Det Tekniske Museum - 1 Voksen",
+                    "lastSaleDate":"2013-02-26T14:40:58+01:00",
+                    "numberOfSales":"44",
+                    "providerId":10
+                },
+                {
+                    "id":10,
+                    "title":"1 dags leje af voksencykel (herre)",
+                    "lastSaleDate":"2013-02-26T14:40:58+01:00",
+                    "numberOfSales":"30",
+                    "providerId":9
+                },
+                {
+                    "id":11,
+                    "title":"1 dags leje af voksencykel (dame)",
+                    "lastSaleDate":"2013-02-26T14:40:58+01:00",
+                    "numberOfSales":"27",
+                    "providerId":9
+                },
+                {
+                    "id":12,
+                    "title":"1 dags leje af barnecykel (pige)",
+                    "lastSaleDate":"2013-02-26T14:40:58+01:00",
+                    "numberOfSales":"24",
+                    "providerId":9
+                },
+                {
+                    "id":25,
+                    "title":"Enkeltv\u00e6relse",
+                    "lastSaleDate":"2013-02-26T14:30:12+01:00",
+                    "numberOfSales":"18",
+                    "providerId":17
+                }
+            ]
+
 ## Product Allotment [/channel/product-allotment?product={product}&offset={offset}&limit={limit}]
 ### Get Product Allotments [GET]
 
@@ -1383,6 +1298,318 @@ Retrieve a list of product allotments.
                 },
                 "allotmentsCount":6
             }
+
+## Cities [/channel/city]
+### Get City List [GET]
+
+Retrieve a list of cities that have at least one product for sale at this point in time. Product can be filtered using values from this resource.
+
++ Response 200 (application/xml)
+
+    + Body
+
+            <?xml version="1.0" encoding="UTF-8"?>
+            <cities xmlns="http://netimage.dk/pcm/channel/city">
+                <city id="2439">
+                    <title>Gilleleje</title>
+                </city>
+                <city id="2471">
+                    <title>Helsinge</title>
+                </city>
+                <city id="2344">
+                    <title>Helsingør</title>
+                </city>
+                <city id="2298">
+                    <title>Hillerød</title>
+                </city>
+                <city id="2319">
+                    <title>Slangerup</title>
+                </city>
+            </cities>
+
++ Response 200 (application/json)
+
+    + Body
+            {
+               "2439":{
+                    "id":2439,
+                    "title":"Gilleleje"
+                },
+               "2471":{
+                    "id":2471,
+                    "title":"Helsinge"
+                },
+               "2344":{
+                    "id":2344,
+                    "title":"Helsing\u00f8r"
+                },
+               "2298":{
+                    "id":2298,
+                    "title":"Hiller\u00f8d"
+               },
+               "2319":{
+                    "id":2319,
+                    "title":"Slangerup"
+                }
+            }
+
+## Themes [/channel/theme]
+### Get List of Themes [GET]
+
+Retrieve a list of active themes. Products can be filtered using values from this resource. Each product can belong to multiple themes.
+
++ Response 200 (application/xml)
+
+    + Body
+
+            <?xml version="1.0" encoding="UTF-8"?>
+            <themes xmlns="http://netimage.dk/pcm/channel/theme">
+                <theme id="1">
+                    <name>Theme 1</name>
+                    <descriptionShort></descriptionShort>
+                    <descriptionLong></descriptionLong>
+                </theme>
+                <theme id="2">
+                    <name>Theme 2</name>
+                    <descriptionShort></descriptionShort>
+                    <descriptionLong></descriptionLong>
+                </theme>
+            </themes>
+
++ Response 200 (application/json)
+
+    + Body
+
+            {
+                "1":{
+                    "id":1,
+                    "name":"Theme 1",
+                    "descriptionShort":"",
+                    "descriptionLong":""
+                },
+                "2":{
+                    "id":2,
+                    "name":"Theme 2",
+                    "descriptionShort":"",
+                    "descriptionLong":""
+                }
+            }
+## Cart Related Products [/channel/cart-related-products?limit={limit}]
+### Get Related Products [GET]
+
+Retrieve related products to products added to the shopping cart. The products are chosen by theme and city where theme has a priority. If there are no products from the same theme and city, then any other products will be returned. Products are returned randomly and there will not be the same products returned as in the shopping cart.
+
++ Parameters
+    + limit (number, optional) - Maximum number of related products to return.
+        + Default: 4
+    + channel (string, required) - The name of the channel.
+    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
+        + Default: `da`
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
+
+
++ Response 200 (application/xml)
+
+    + Body
+
+            <?xml version="1.0" encoding="UTF-8"?>
+            <cart-related-products xmlns="http://netimage.dk/pcm/channel/cart-related-products" count="4">
+                <product id="4" ver="3" providerId="1">
+                    <insertTime>2013-07-09T12:58:01+02:00</insertTime>
+                    <salesEmail>khe@netimage.dk</salesEmail>
+                    <modifiedTime>2014-08-12T09:40:45+02:00</modifiedTime>
+                    <lockedInAdmin>0</lockedInAdmin>
+                    <isFree>0</isFree>
+                    <title>Kanotur - test</title>
+                    <intro>test</intro>
+                    <description>&lt;p&gt;&#13;test&lt;/p&gt;&#13;</description>
+                    <providerName>Test produktudbyder</providerName>
+                    <type>theme</type>
+                    <isAccommodation>0</isAccommodation>
+                    <images>
+                        <image>
+                            <thumb>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/thumbs/02d.jpg</thumb>
+                            <main>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/main/02d.jpg</main>
+                            <org>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/02d.jpg</org>
+                        </image>
+                    </images>
+                </product>
+                <product id="6" ver="5" providerId="1">
+                    <insertTime>2013-07-09T15:43:10+02:00</insertTime>
+                    <salesEmail>kdr@netimage.dk</salesEmail>
+                    <modifiedTime>2014-06-18T15:57:09+02:00</modifiedTime>
+                    <lockedInAdmin>0</lockedInAdmin>
+                    <isFree>0</isFree>
+                    <title>Ørken</title>
+                    <intro>ørken...</intro>
+                    <description>&lt;p&gt;&#13;Stor &amp;oslash;rken..&lt;/p&gt;&#13;</description>
+                    <providerName>Test produktudbyder</providerName>
+                    <type>theme</type>
+                    <isAccommodation></isAccommodation>
+                    <images>
+                        <image>
+                            <thumb>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/thumbs/023.jpg</thumb>
+                            <main>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/main/023.jpg</main>
+                            <org>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/023.jpg</org>
+                        </image>
+                        <image>
+                            <thumb>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/thumbs/022.jpg</thumb>
+                            <main>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/main/022.jpg</main>
+                            <org>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/022.jpg</org>
+                        </image>
+                    </images>
+                </product>
+                <product id="1" ver="1" providerId="1">
+                    <insertTime>2013-07-04T17:15:27+02:00</insertTime>
+                    <salesEmail>khe@netimage.dk</salesEmail>
+                    <modifiedTime>2014-07-22T13:41:55+02:00</modifiedTime>
+                    <lockedInAdmin>0</lockedInAdmin>
+                    <isFree>0</isFree>
+                    <title>Sommerhus</title>
+                    <intro>test</intro>
+                    <description>&lt;p&gt;&#13;test&lt;/p&gt;&#13;</description>
+                    <providerName>Test produktudbyder</providerName>
+                    <type>city</type>
+                    <isAccommodation>1</isAccommodation>
+                    <images>
+                        <image>
+                            <thumb>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/thumbs/02c.jpg</thumb>
+                            <main>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/main/02c.jpg</main>
+                            <org>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/02c.jpg</org>
+                        </image>
+                    </images>
+                </product>
+                <product id="25" ver="2" providerId="1">
+                    <insertTime>2013-09-26T12:37:34+02:00</insertTime>
+                    <salesEmail>khe@netimage.dk</salesEmail>
+                    <modifiedTime>2014-08-06T10:27:05+02:00</modifiedTime>
+                    <lockedInAdmin>0</lockedInAdmin>
+                    <isFree>0</isFree>
+                    <title>Bookingprodukt - test</title>
+                    <intro>Kort beskrivelse af produktet</intro>
+                    <description>&lt;p&gt;&#13;test&lt;/p&gt;&#13;</description>
+                    <providerName>Test produktudbyder</providerName>
+                    <type>other</type>
+                    <isAccommodation>0</isAccommodation>
+                    <images>
+                        <image>
+                            <thumb>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/thumbs/02e.JPG</thumb>
+                            <main>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/main/02e.JPG</main>
+                            <org>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/02e.JPG</org>
+                        </image>
+                    </images>
+                </product>
+            </cart-related-products>
+
++ Response 200 (application/json)
+
+    + Body
+
+            [
+                {
+                    "id":25,
+                    "ver":2,
+                    "providerId":1,
+                    "label":null,
+                    "insertTime":"2013-09-26T12:37:34+02:00",
+                    "salesEmail":"khe@netimage.dk",
+                    "modifiedTime":"2014-08-06T10:27:05+02:00",
+                    "lockedInAdmin":0,
+                    "isFree":0,
+                    "title":"Bookingprodukt - test",
+                    "intro":"Kort beskrivelse af produktet",
+                    "description":"<p>\r\n\ttest<\/p>\r\n,
+                    "providerName":"Test produktudbyder",
+                    "type":"theme",
+                    "isAccommodation":"0",
+                    "images":[
+                        {
+                            "thumb":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/thumbs\/02e.JPG",
+                            "main":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/main\/02e.JPG",
+                            "org":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/02e.JPG"
+                        }
+                    ]
+                },
+                {
+                    "id":1,
+                    "ver":1,
+                    "providerId":1,
+                    "label":null,
+                    "insertTime":"2013-07-04T17:15:27+02:00",
+                    "salesEmail":"khe@netimage.dk",
+                    "modifiedTime":"2014-07-22T13:41:55+02:00",
+                    "lockedInAdmin":0,
+                    "isFree":0,
+                    "title":"Sommerhus",
+                    "intro":"test",
+                    "description":"<p>\r\n\ttest<\/p>\r\n",
+                    "providerName":"Test produktudbyder",
+                    "type":"theme",
+                    "isAccommodation":"1",
+                    "images":[
+                        {
+                            "thumb":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/thumbs\/02c.jpg",
+                            "main":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/main\/02c.jpg",
+                            "org":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/02c.jpg"
+                        }
+                    ]
+               },
+               {
+                    "id":6,
+                    "ver":5,
+                    "providerId":1,
+                    "label":null,
+                    "insertTime":"2013-07-09T15:43:10+02:00",
+                    "salesEmail":"kdr@netimage.dk",
+                    "modifiedTime":"2014-06-18T15:57:09+02:00",
+                    "lockedInAdmin":0,"isFree":0,
+                    "title":"\u00d8rken",
+                    "intro":"\u00f8rken...",
+                    "description":"<p>\r\n\tStor &oslash;rken..<\/p>\r\n",
+                    "providerName":"Test produktudbyder",
+                    "type":"city",
+                    "isAccommodation":"",
+                    "images":[
+                        {
+                            "thumb":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/thumbs\/023.jpg",
+                            "main":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/main\/023.jpg",
+                            "org":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/023.jpg"
+                        },
+                        {
+                            "thumb":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/thumbs\/022.jpg",
+                            "main":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/main\/022.jpg",
+                            "org":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/022.jpg"
+                        }
+                    ]
+               },
+               {
+                    "id":7,
+                    "ver":2,
+                    "providerId":1,
+                    "label":null,
+                    "insertTime":"2013-07-09T16:04:28+02:00",
+                    "salesEmail":"kdr@netimage.dk",
+                    "modifiedTime":"2014-06-18T15:59:48+02:00",
+                    "lockedInAdmin":0,
+                    "isFree":0,
+                    "title":"Koala",
+                    "intro":"test",
+                    "description":"<p>\r\n\ttest<\/p>\r\n",
+                    "providerName":"Test produktudbyder",
+                    "type":"other",
+                    "isAccommodation":"",
+                    "images":[
+                        {
+                            "thumb":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/thumbs\/021.jpg",
+                            "main":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/main\/021.jpg",
+                            "org":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/021.jpg"
+                        }
+                    ]
+               }
+            ]
 
 # Group Provider
 
@@ -1792,40 +2019,7 @@ Retrieve route details.
                 ]
             }
 
-# Group Batch
-
-## Request Grouping [/channel/batch?r={r}]
-### Batch Request Grouping [GET]
-
-This is a special resource, all previously mentioned resources can be accessed through batch request. Purpose of this is to group requests into one request instead of making multiple http requests.
-
-+ Parameters 
-    + r (array, required)
-        This is a key/value pair of requests to be performed. Pair key is request id, and value is url encoded path.
-        The path begins with resource name, not with ‘channel/’.
-        Global parameters (language, currency, channel) are set only to batch request (no need to duplicate them for each sub request).
-        Only GET requests are supported.
-
-+ Response 200 (application/xml)
-
-    + Body
-
-            <?xml version="1.0" encoding="UTF-8"?>
-            <requests xmlns="http://netimage.dk/pcm/channel/batch">
-                <request id="cities">...</request>
-                <request id="products">...</request>
-            </requests>
-
-+ Response 200 (application/json)
-
-    + Body
-
-            {
-                "cities":[...],
-                "products":[...]
-            }
-
-# Group Ticket Identity
+# Group Barcode Details and Usage History
 
 ## Ticket List [/channel/ticket-identity]
 ### Get Barcode Details and History [GET]
@@ -1898,7 +2092,7 @@ Returns barcode history and details.
 ## Ticket details [/channel/ticket-identity/{barcode}]
 ### Get Ticket Identity Details [GET]
 
-Retrieve identity details
+Retrieve ticket identity details
 
 + Parameters
     + barcode (number, required) - Ticket barcode
@@ -1969,15 +2163,15 @@ Retrieve identity details
 
 Tries to scan a given ticket. A list of errors will be returned. For more details overview, see the ticket identity read-action.
 
-Possible error codes:
-
-+ 2000 - The package the ticket belongs to is expired since the first use (for package products only)
-+ 2001 - The ticket itself has expired
-+ 3000 - The ticket has already been used the allowed number of times. Call read to get the complete list of usages.
-+ 3001 - The ticket has already been used the allowed number of times for the specific provider.
-+ 4000 - The ticket exists, but belongs to another organization
-+ 4500 - The ticket exists, but can only be used by different provider
-+ 5000 - The ticket does not exist
+|Error code|Description|
+|---|---|
+|2000|The package the ticket belongs to is expired since the first use (for package products only)|
+|2001|The ticket itself has expired|
+|3000|The ticket has already been used the allowed number of times. Call read to get the complete list of usages.|
+|3001|The ticket has already been used the allowed number of times for the specific provider.|
+|4000|The ticket exists, but belongs to another organization|
+|4500|The ticket exists, but can only be used by different provider|
+|5000|The ticket does not exist|
 
 + Parameters
     + barcode (number, required) - The barcode to scan
@@ -2042,7 +2236,114 @@ Possible error codes:
                 }
             }
 
-# Group Sales Agreement
+# Group Language, Currency, Sales Agreements and Batch Requests
+
+## Supported Languages [/channel/language]
+### Get List of Languages [GET]
+
+Retrieve a list of supported languages. 
+
++ Response 200 (application/xml)
+
+    + Body
+
+            <?xml version="1.0" encoding="UTF-8"?>
+            <languages xmlns="http://netimage.dk/pcm/channel/language">
+                <language id="1" code="da" locale="da_DK">danish</language>
+                <language id="2" code="en" locale="en_GB">english</language>
+                <language id="3" code="de" locale="de_DE">german</language>
+                <language id="4" code="no" locale="nb_NO">norwegian</language>
+                <language id="5" code="sv" locale="sw_SE">swedish</language>
+                <language id="6" code="nl" locale="nl_NL">dutch</language>
+            </languages>
+
++ Response 200 (application/json)
+
+    + Body
+            [
+                {
+                    "id":1,
+                    "label":"danish",
+                    "locale":"da_DK",
+                    "code":"da"
+                },
+                {
+                    "id":2,
+                    "label":"english",
+                    "locale":"en_GB",
+                    "code":"en"
+                },
+                {
+                    "id":3,
+                    "label":"german",
+                    "locale":"de_DE",
+                    "code":"de"
+                },
+                {
+                    "id":4,
+                    "label":"norwegian",
+                    "locale":"nb_NO",
+                    "code":"no"
+                },
+                {
+                    "id":5,
+                    "label":"swedish",
+                    "locale":"sw_SE",
+                    "code":"sv"
+                },
+                {
+                    "id":6,
+                    "label":"dutch",
+                    "locale":"nl_NL",
+                    "code":"nl"
+                }
+            ]
+
+## Supported Currencies [/channel/currency]
+### Get supported currencies [GET]
+
+Retrieve a list of supported currencies.
+
++ Response 200 (application/xml)
+
+    + Body
+
+            <?xml version="1.0" encoding="UTF-8"?>
+            <currencies xmlns="http://netimage.dk/pcm/channel/currency">
+                <currency id="1">DKK</currency>
+                <currency id="2">EUR</currency>
+                <currency id="3">USD</currency>
+                <currency id="4">SEK</currency>
+                <currency id="5">NOK</currency>
+            </currencies>
+
++ Response 200 (application/json)
+
+    + Body
+
+            [
+                {
+                    "id":1,
+                    "currency":"DKK"
+                },
+                {
+                    "id":2,
+                    "currency":"EUR"
+                },
+                {
+                    "id":3,
+                    "currency":"USD"
+                },
+                {
+                    "id":4,
+                    "currency":"SEK"
+                },
+                {
+                    "id":5,
+                    "currency":"NOK"
+                }
+            ]
+
 ## Sales Agreements [/channel/sales-agreement]
 ### Get Active Sales Agreements [GET]
 
@@ -2119,287 +2420,36 @@ Retrieve a list of active sales agreements.
                 }
             ]
 
-# Group Language
+## Request Grouping [/channel/batch?r={r}]
+### Batch Request Grouping [GET]
 
-## Supported Languages [/channel/language]
-### Get List of Languages [GET]
+This is a special resource, all previously mentioned resources can be accessed through batch request. Purpose of this is to group requests into one request instead of making multiple http requests.
 
-Retrieve a list of supported languages. 
-
-+ Response 200 (application/xml)
-
-    + Body
-
-            <?xml version="1.0" encoding="UTF-8"?>
-            <languages xmlns="http://netimage.dk/pcm/channel/language">
-                <language id="1" code="da" locale="da_DK">danish</language>
-                <language id="2" code="en" locale="en_GB">english</language>
-                <language id="3" code="de" locale="de_DE">german</language>
-                <language id="4" code="no" locale="nb_NO">norwegian</language>
-                <language id="5" code="sv" locale="sw_SE">swedish</language>
-                <language id="6" code="nl" locale="nl_NL">dutch</language>
-            </languages>
-
-+ Response 200 (application/json)
-
-    + Body
-            [
-                {
-                    "id":1,
-                    "label":"danish",
-                    "locale":"da_DK",
-                    "code":"da"
-                },
-                {
-                    "id":2,
-                    "label":"english",
-                    "locale":"en_GB",
-                    "code":"en"
-                },
-                {
-                    "id":3,
-                    "label":"german",
-                    "locale":"de_DE",
-                    "code":"de"
-                },
-                {
-                    "id":4,
-                    "label":"norwegian",
-                    "locale":"nb_NO",
-                    "code":"no"
-                },
-                {
-                    "id":5,
-                    "label":"swedish",
-                    "locale":"sw_SE",
-                    "code":"sv"
-                },
-                {
-                    "id":6,
-                    "label":"dutch",
-                    "locale":"nl_NL",
-                    "code":"nl"
-                }
-            ]
-
-# Group Cart Related Products
-
-## Cart Related Products [/channel/cart-related-products?limit={limit}]
-### Get Related Products [GET]
-
-Retrieve related products to products added to the shopping cart. The products are chosen by theme and city where theme has a priority. If there are no products from the same theme and city, then any other products will be returned. Products are returned randomly and there will not be the same products returned as in the shopping cart.
-
-+ Parameters
-    + channel (string, required) - The name of the channel.
-    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
-        + Default: `da`
-    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
-        + Default: `DKK`
-    + format: `xml` (string, optional) - Either json or xml.
-        + Default: `json`
-    + limit (number, optional) - Maximum number of related products to return.
-        + Default: 4
-
++ Parameters 
+    + r (array, required)
+        This is a key/value pair of requests to be performed. Pair key is request id, and value is url encoded path.
+        The path begins with resource name, not with ‘channel/’.
+        Global parameters (language, currency, channel) are set only to batch request (no need to duplicate them for each sub request).
+        Only GET requests are supported.
 
 + Response 200 (application/xml)
 
     + Body
 
             <?xml version="1.0" encoding="UTF-8"?>
-            <cart-related-products xmlns="http://netimage.dk/pcm/channel/cart-related-products" count="4">
-                <product id="4" ver="3" providerId="1">
-                    <insertTime>2013-07-09T12:58:01+02:00</insertTime>
-                    <salesEmail>khe@netimage.dk</salesEmail>
-                    <modifiedTime>2014-08-12T09:40:45+02:00</modifiedTime>
-                    <lockedInAdmin>0</lockedInAdmin>
-                    <isFree>0</isFree>
-                    <title>Kanotur - test</title>
-                    <intro>test</intro>
-                    <description>&lt;p&gt;&#13;test&lt;/p&gt;&#13;</description>
-                    <providerName>Test produktudbyder</providerName>
-                    <type>theme</type>
-                    <isAccommodation>0</isAccommodation>
-                    <images>
-                        <image>
-                            <thumb>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/thumbs/02d.jpg</thumb>
-                            <main>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/main/02d.jpg</main>
-                            <org>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/02d.jpg</org>
-                        </image>
-                    </images>
-                </product>
-                <product id="6" ver="5" providerId="1">
-                    <insertTime>2013-07-09T15:43:10+02:00</insertTime>
-                    <salesEmail>kdr@netimage.dk</salesEmail>
-                    <modifiedTime>2014-06-18T15:57:09+02:00</modifiedTime>
-                    <lockedInAdmin>0</lockedInAdmin>
-                    <isFree>0</isFree>
-                    <title>Ørken</title>
-                    <intro>ørken...</intro>
-                    <description>&lt;p&gt;&#13;Stor &amp;oslash;rken..&lt;/p&gt;&#13;</description>
-                    <providerName>Test produktudbyder</providerName>
-                    <type>theme</type>
-                    <isAccommodation></isAccommodation>
-                    <images>
-                        <image>
-                            <thumb>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/thumbs/023.jpg</thumb>
-                            <main>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/main/023.jpg</main>
-                            <org>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/023.jpg</org>
-                        </image>
-                        <image>
-                            <thumb>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/thumbs/022.jpg</thumb>
-                            <main>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/main/022.jpg</main>
-                            <org>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/022.jpg</org>
-                        </image>
-                    </images>
-                </product>
-                <product id="1" ver="1" providerId="1">
-                    <insertTime>2013-07-04T17:15:27+02:00</insertTime>
-                    <salesEmail>khe@netimage.dk</salesEmail>
-                    <modifiedTime>2014-07-22T13:41:55+02:00</modifiedTime>
-                    <lockedInAdmin>0</lockedInAdmin>
-                    <isFree>0</isFree>
-                    <title>Sommerhus</title>
-                    <intro>test</intro>
-                    <description>&lt;p&gt;&#13;test&lt;/p&gt;&#13;</description>
-                    <providerName>Test produktudbyder</providerName>
-                    <type>city</type>
-                    <isAccommodation>1</isAccommodation>
-                    <images>
-                        <image>
-                            <thumb>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/thumbs/02c.jpg</thumb>
-                            <main>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/main/02c.jpg</main>
-                            <org>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/02c.jpg</org>
-                        </image>
-                    </images>
-                </product>
-                <product id="25" ver="2" providerId="1">
-                    <insertTime>2013-09-26T12:37:34+02:00</insertTime>
-                    <salesEmail>khe@netimage.dk</salesEmail>
-                    <modifiedTime>2014-08-06T10:27:05+02:00</modifiedTime>
-                    <lockedInAdmin>0</lockedInAdmin>
-                    <isFree>0</isFree>
-                    <title>Bookingprodukt - test</title>
-                    <intro>Kort beskrivelse af produktet</intro>
-                    <description>&lt;p&gt;&#13;test&lt;/p&gt;&#13;</description>
-                    <providerName>Test produktudbyder</providerName>
-                    <type>other</type>
-                    <isAccommodation>0</isAccommodation>
-                    <images>
-                        <image>
-                            <thumb>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/thumbs/02e.JPG</thumb>
-                            <main>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/main/02e.JPG</main>
-                            <org>http://projects.dev/aktivnordjylland/trunk/public/upload/00/000/02e.JPG</org>
-                        </image>
-                    </images>
-                </product>
-            </cart-related-products>
+            <requests xmlns="http://netimage.dk/pcm/channel/batch">
+                <request id="cities">...</request>
+                <request id="products">...</request>
+            </requests>
 
 + Response 200 (application/json)
 
     + Body
 
-            [
-                {
-                    "id":25,
-                    "ver":2,
-                    "providerId":1,
-                    "label":null,
-                    "insertTime":"2013-09-26T12:37:34+02:00",
-                    "salesEmail":"khe@netimage.dk",
-                    "modifiedTime":"2014-08-06T10:27:05+02:00",
-                    "lockedInAdmin":0,
-                    "isFree":0,
-                    "title":"Bookingprodukt - test",
-                    "intro":"Kort beskrivelse af produktet",
-                    "description":"<p>\r\n\ttest<\/p>\r\n,
-                    "providerName":"Test produktudbyder",
-                    "type":"theme",
-                    "isAccommodation":"0",
-                    "images":[
-                        {
-                            "thumb":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/thumbs\/02e.JPG",
-                            "main":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/main\/02e.JPG",
-                            "org":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/02e.JPG"
-                        }
-                    ]
-                },
-                {
-                    "id":1,
-                    "ver":1,
-                    "providerId":1,
-                    "label":null,
-                    "insertTime":"2013-07-04T17:15:27+02:00",
-                    "salesEmail":"khe@netimage.dk",
-                    "modifiedTime":"2014-07-22T13:41:55+02:00",
-                    "lockedInAdmin":0,
-                    "isFree":0,
-                    "title":"Sommerhus",
-                    "intro":"test",
-                    "description":"<p>\r\n\ttest<\/p>\r\n",
-                    "providerName":"Test produktudbyder",
-                    "type":"theme",
-                    "isAccommodation":"1",
-                    "images":[
-                        {
-                            "thumb":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/thumbs\/02c.jpg",
-                            "main":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/main\/02c.jpg",
-                            "org":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/02c.jpg"
-                        }
-                    ]
-               },
-               {
-                    "id":6,
-                    "ver":5,
-                    "providerId":1,
-                    "label":null,
-                    "insertTime":"2013-07-09T15:43:10+02:00",
-                    "salesEmail":"kdr@netimage.dk",
-                    "modifiedTime":"2014-06-18T15:57:09+02:00",
-                    "lockedInAdmin":0,"isFree":0,
-                    "title":"\u00d8rken",
-                    "intro":"\u00f8rken...",
-                    "description":"<p>\r\n\tStor &oslash;rken..<\/p>\r\n",
-                    "providerName":"Test produktudbyder",
-                    "type":"city",
-                    "isAccommodation":"",
-                    "images":[
-                        {
-                            "thumb":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/thumbs\/023.jpg",
-                            "main":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/main\/023.jpg",
-                            "org":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/023.jpg"
-                        },
-                        {
-                            "thumb":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/thumbs\/022.jpg",
-                            "main":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/main\/022.jpg",
-                            "org":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/022.jpg"
-                        }
-                    ]
-               },
-               {
-                    "id":7,
-                    "ver":2,
-                    "providerId":1,
-                    "label":null,
-                    "insertTime":"2013-07-09T16:04:28+02:00",
-                    "salesEmail":"kdr@netimage.dk",
-                    "modifiedTime":"2014-06-18T15:59:48+02:00",
-                    "lockedInAdmin":0,
-                    "isFree":0,
-                    "title":"Koala",
-                    "intro":"test",
-                    "description":"<p>\r\n\ttest<\/p>\r\n",
-                    "providerName":"Test produktudbyder",
-                    "type":"other",
-                    "isAccommodation":"",
-                    "images":[
-                        {
-                            "thumb":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/thumbs\/021.jpg",
-                            "main":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/main\/021.jpg",
-                            "org":"http:\/\/projects.dev\/aktivnordjylland\/trunk\/public\/upload\/00\/000\/021.jpg"
-                        }
-                    ]
-               }
-            ]
+            {
+                "cities":[...],
+                "products":[...]
+            }
 
 # Data Structures
 
@@ -2416,7 +2466,7 @@ Retrieve related products to products added to the shopping cart. The products a
     The date and time in the format (Y-m-d H:i:s)
 
 ## Address (object)
-    + name (string,)
+    + name (string)
     + email (string)
     + phone (number)
     + name (string)
@@ -2442,7 +2492,7 @@ Retrieve related products to products added to the shopping cart. The products a
             + `week`
             + `day`
             + `hour`
-    + week_days (number) - For accomodation only. Comma spearated list of days as 1-7
+    + week_days (number) - For accomodation only. Comma separated list of days as 1-7
 
 ## Price (object)
     + currency (string) - ISO 4217 format e.g. EUR, DKK
