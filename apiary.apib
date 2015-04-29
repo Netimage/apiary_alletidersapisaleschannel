@@ -11,12 +11,6 @@ Welcome to the Sales Channel interface documentation of the **AlletidersAPI.dk**
 + [System Overview](http://docs.alletidersapi.dk/overview/)
 + [Provider Documentation](http://docs.alletidersapiprovider.apiary.io/)
 
-## Corrections:
-
-+ PCM-* (Product Channel Manager) => AlletidersAPI
-+ Combine Product & Event Booking => AlletidersAPI
-
-
 ## Document purpose
 
 This document describes the API between sales channels and Alletiders API.
@@ -24,7 +18,6 @@ This document describes the API between sales channels and Alletiders API.
 ## RESTful service
 
 Alletiders API implements CRUD functionality on a series of resources allowing search of products, shopping cart and payment interactions. Enabling POS systems to display and make sales of products from various product providers.
-
 
 ## Security, authorization and identity
 
@@ -37,17 +30,21 @@ Order and payment interactions require session support from the channel client.
 ## Input and Output formats
 
 Data is available in JSON or XML formats.
+
 All input parameters have to be passed as url encoded form - either in query string or POST/PUT data.
+
 Presented examples contains additional white space for better readability, this is not the case for actual responses.
 
 ## Currency format
 
 All prices in the responses are in cents, (currency * 100) to avoid rounding errors. Divide received numbers by 100 and format it before showing it to the user.
+
 All input values that are to be used as currency have to be multiplied by 100.
 
 ## Error handling
 
 If an exception occurs in any request, a special content is returned. This content will be either HTML, JSON, or XML and will depend on the current format. The content will include the actual error message and all exception information, including stack trace serialized to appropriate format. The stack trace and the error message as a whole is very useful for error investigation, please keep it, if you need to communicate with Combine about possible errors. The sales channel should be looking at the message(text in bold).
+
 For example:
 
 XML
