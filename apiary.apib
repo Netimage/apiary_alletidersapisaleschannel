@@ -31,7 +31,7 @@ Order and payment interactions require session support from the channel client.
 
 Data is available in JSON or XML formats.
 
-All input parameters have to be passed as url encoded form - either in query string or POST/PUT data.
+All input parameters have to be passed as raw JSON or url encoded form - either in query string or POST/PUT data.
 
 Presented examples contains additional white space for better readability, this is not the case for actual responses.
 
@@ -43,7 +43,7 @@ All input values that are to be used as currency have to be multiplied by 100.
 
 ## Error handling
 
-If an exception occurs in any request, a special content is returned. This content will be either HTML, JSON, or XML and will depend on the current format. The content will include the actual error message and all exception information, including stack trace serialized to appropriate format. The stack trace and the error message as a whole is very useful for error investigation, please keep it, if you need to communicate with Combine about possible errors. The sales channel should be looking at the message(text in bold).
+If an exception occurs in any request, a special content is returned. This content will be either HTML, JSON, or XML and will depend on the current format. The content will include the actual error message and all exception information, including stack trace serialized to appropriate format. The stack trace and the error message as a whole is very useful for error investigation, please keep it, if you need to communicate with Combine about possible errors. The sales channel should be looking at the \<message\>.
 
 For example:
 
@@ -81,7 +81,9 @@ JSON
 ## Orders [/channel/order]
 ### Create a New Order [POST]
 
-Create a new order. All attributes are optional in the initial call. Lower the amount of API requests by specifying parameters initially. Sets a session cookie.
+Create a new order. All attributes are optional in the initial call. Lower the amount of API requests by specifying parameters initially.
+
+*NOTE:* Sets a session cookie that is later used to validate the order. Remember to pass the session id (PHPSESSID) in future requests when dealing with this order.
 
 + Parameters
 
@@ -106,6 +108,10 @@ Create a new order. All attributes are optional in the initial call. Lower the a
             + qty (number) - quantity, CANNOT be changed later!
             + allotments (array) - collection of key/value pairs. Pair key is allotment id and value has to be set to true. Allotments can be retrieved via the [ProductAllotment](http://docs.alletidersapisaleschannel.apiary.io/#reference/products/product-allotment/get-product-allotments) resource.
     + channel (string, required) - The name of the channel.
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 201
 
@@ -116,11 +122,13 @@ Create a new order. All attributes are optional in the initial call. Lower the a
 ## Order [/channel/order/{orderId}]
 ### Update Order Contents [PUT]
 
-Updates an order, setting currency, address, orderlines etc. The order is identified via a session cookie. It is only possible to perform this request after "Create a New Order" has been called and until the next "Create a New order" call.
+Updates an order, setting currency, address, orderlines etc. It is only possible to perform this request after "Create a New Order" has been called and until the next "Create a New order" call.
 
-**Note that all orderlines are deleted when currency is changed!**
+*NOTE:* that all orderlines are deleted when currency is changed!
 
-+ Properties
+*NOTE:* The passed session id cookie is used to validate the order.
+
++ Parameters
     + orderId (number, optional) - The order ID. If not specified it will be retrieved from the session
     + reserve (boolean, optional) - Indicates that after this update, the order must be reserved. Only applicable if order price = 0
     + complete (boolean, optional) - Indicates that order was placed externally and it is not using the internal payment processing.
@@ -142,10 +150,25 @@ Updates an order, setting currency, address, orderlines etc. The order is identi
             + id (number) - product identifier
             + qty (number) - quantity, CANNOT be changed later!
             + allotments (array) - collection of key/value pairs. Pair key is allotment id and value has to be set to true. Allotments can be retrieved via the [ProductAllotment](http://docs.alletidersapisaleschannel.apiary.io/#reference/products/product-allotment/get-product-allotments) resource.
+    + channel (string, required) - The name of the channel.
+    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
+        + Default: `DKK`
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
+
++ Request
+
+    + Headers
+
+        Cookie: PHPSESSID=v2uef43ihovm65k3vumsgdd6n4
 
 + Response 205
 
-Response 200 (application/xml)
+    Reset Content - The order will be cancelled
+
+    + Body
+
++ Response 200 (application/xml)
 
     + Body
 
@@ -284,7 +307,9 @@ Response 200 (application/xml)
 
 ### Get Order Details [GET]
 
-Retrieves all the information about the order, including order details, currency, order lines, order fees and the address. The order itself is identified via session cookie. It is only possible to perform this request after "Create a New Order" has been called and until the next "Create a New order" call.
+Retrieves all the information about the order, including order details, currency, order lines, order fees and the address. It is only possible to perform this request after "Create a New Order" has been called and until the next "Create a New order" call.
+
+*NOTE:* The passed session id cookie is used to validate the order.
 
 #### Response description
 
@@ -295,6 +320,12 @@ Retrieves all the information about the order, including order details, currency
 |cost|cost of the order, based on product prices in sales agreements, always in DKK|
 |isReady|Indicates whether the order is completed and ticket identities were received/generated. It is safe to poll this resource.|
 |isCancelled|Indicates if the order was cancelled|
+
++ Request
+
+    + Headers
+
+        Cookie: PHPSESSID=v2uef43ihovm65k3vumsgdd6n4
 
 + Response 200 (application/xml)
 
@@ -545,8 +576,6 @@ Create a new payment transaction. Call this when user intends to pay for the ord
 ### Get Payment URL and Form Fields [GET]
 
 Retrieve payment action url and required form fields. The data received is only supposed to be used as is and result in a form that the user can submit. The action specified in response must be set as html form action, so the user would be directed to payment gateway. Any modification to form fields will result in an error in payment gateway.
-
-The data received is only supposed to be used as is and result in a form that the user can submit. The action specified in response must be set as html form action, so the user would be directed to payment gateway. Any modification to form fields will result in an error in payment gateway.
 
 + Parameters
     + transactionId (number, required) - The transaction ID
@@ -1115,10 +1144,17 @@ Retrieve a list of product allotments.
 
 + Parameters
     + product (number, required) - Product id.
+    + startDate (string, optional) - Starting date for allotments, default is current date.
     + offset (number, optional) - Number of allotments to skip.
         + Default: 0
     + limit (number, optional) - Number of allotments to return.
         + Default: 7
+    + Interval (string, optional) - Length of interval to fetch (only applicable to Accommodation products)
+    + IntervalUnit (optional, string) ... Unit of interval (only applicable to Accommodation products)
+        + Values
+            + `hour`
+            + `day`
+            + `week`
     + channel (string, required) - The name of the channel.
     + language: `en` (string, optional) - Language to use in ISO 639-1 standard
         + Default: `da`
@@ -1398,6 +1434,7 @@ Retrieve a list of active themes. Products can be filtered using values from thi
                     "descriptionLong":""
                 }
             }
+
 ## Cart Related Products [/channel/cart-related-products?limit={limit}]
 ### Get Related Products [GET]
 
@@ -1825,204 +1862,6 @@ Retrieve provider details
                 ]
             }
 
-# Group Trip Planner
-
-## Trip Planner Concept [/channel/trip-planner-concept]
-### Get Concept List [GET]
-
-Retrieve a list of concepts (route groups) used by trip planner.
-
-+ Response 200 (application/xml)
-
-    + Body
-
-            <?xml version="1.0" encoding="UTF-8"?>
-            <concepts xmlns="http://netimage.dk/pcm/channel/trip-planner-concept">
-                <concept id="3">
-                    <isActive>1</isActive>
-                    <title>King's Challenge</title>
-                </concept>
-                <concept id="4">
-                    <isActive>1</isActive>
-                    <title>Kærlighed på cykel</title>
-                </concept>
-                <concept id="5">
-                    <isActive>1</isActive>
-                    <title>Dessertweekend</title>
-                </concept>
-                <concept id="6">
-                    <isActive>1</isActive>
-                    <title>Langs den danske riviera</title>
-                </concept>
-            </concepts>
-
-+ Response 200 (application/json)
-
-    + Body
-
-            [
-                {
-                    "id":3,
-                    "isActive":1,
-                    "title":"King's Challenge"
-                },
-                {
-                    "id":4,
-                    "isActive":1,
-                    "title":"K\u00e6rlighed p\u00e5 cykel"
-                },
-                {
-                    "id":5,
-                    "isActive":1,
-                    "title":"Dessertweekend"
-                },
-                {
-                    "id":6,
-                    "isActive":1,
-                    "title":"Langs den danske riviera"
-                }
-            ]
-
-## Trip Planner Route List [/channel/trip-planner-route?concept={concept}]
-### Get Route List [GET]
-
-Retrieve a list of routes used by trip planner.
-
-+ Parameters
-    + concept (number, optional) - Concept ID. If omitted, the first concept is located and its routes are returned.
-    + channel (string, required) - The name of the channel.
-    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
-        + Default: `da`
-    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
-        + Default: `DKK`
-    + format: `xml` (string, optional) - Either json or xml.
-        + Default: `json`
-
-+ Response 200 (application/xml)
-
-    + Body
-
-            <?xml version="1.0" encoding="UTF-8"?>
-            <routes xmlns="http://netimage.dk/pcm/channel/trip-planner-route">
-                <route id="3">
-                    <conceptId>3</conceptId>
-                    <isActive>1</isActive>
-                    <title>Family Explorer</title>
-                </route>
-            </routes>
-
-+ Response 200 (application/json)
-
-    + Body
-
-            [
-               {
-                    "id":3,
-                    "conceptId":3,
-                    "isActive":1,
-                    "fileId":null,
-                    "title":"Family Explorer",
-                    "description":null
-               }
-            ]
-
-## Trip Planner Route Details [/channel/trip-planner-route/{routeId}]
-### Get Route Details [GET]
-
-Retrieve route details.
-
-+ Parameters
-    + routeId (number, required) - Route ID
-    + channel (string, required) - The name of the channel.
-    + language: `en` (string, optional) - Language to use in ISO 639-1 standard
-        + Default: `da`
-    + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
-        + Default: `DKK`
-    + format: `xml` (string, optional) - Either json or xml.
-        + Default: `json`
-
-+ Response 200 (application/xml)
-
-    + Body
-
-            <?xml version="1.0" encoding="UTF-8"?>
-            <route xmlns="http://netimage.dk/pcm/channel/trip-planner-route" id="3" conceptId="3">
-                <title>Family Explorer</title>
-                <estimatedPrice>199500</estimatedPrice>
-                <days>
-                    <day id="2" cityId="2439">
-                        <products>
-                            <product>5</product>
-                            <product>9</product>
-                            <product>10</product>
-                            <product>11</product>
-                            <product>13</product>
-                            <product>18</product>
-                            <product>19</product>
-                        </products>
-                    </day>
-                    <day id="3" cityId="2448">
-                        <products>
-                            <product>7</product>
-                            <product>8</product>
-                        </products>
-                    </day>
-                    <day id="4" cityId="2344">
-                        <products>
-                            <product>11</product>
-                            <product>12</product>
-                            <product>13</product>
-                            <product>18</product>
-                        </products>
-                    </day>
-                </days>
-            </route>
-
-+ Response 200 (application/json)
-
-    + Body
-
-            {
-                "id":3,
-                "conceptId":3,
-                "title":"Family Explorer",
-                "description":null,
-                "estimatedPrice":199500,
-                "days":[
-                    {
-                         "id":2,
-                         "cityId":2439,
-                         "products":[
-                            5,
-                            9,
-                            10,
-                            11,
-                            13,
-                            18,
-                            19
-                         ]
-                    },
-                    {
-                         "id":3,
-                         "cityId":2448,
-                         "products":[
-                            7,
-                            8
-                         ]
-                    },
-                    {
-                         "id":4,
-                         "cityId":2344,
-                         "products":[
-                            11,
-                            12,
-                            13,
-                            18
-                         ]
-                    }
-                ]
-            }
-
 # Group Barcode Details and Usage History
 
 ## Ticket List [/channel/ticket-identity]
@@ -2303,10 +2142,14 @@ Retrieve a list of supported languages.
                 }
             ]
 
-## Supported Currencies [/channel/currency]
+## Supported Currencies [/channel/currency?format={format}]
 ### Get supported currencies [GET]
 
 Retrieve a list of supported currencies.
+
++ Parameters
+    + format: `xml` (string, optional) - Either json or xml.
+        + Default: `json`
 
 + Response 200 (application/xml)
 
@@ -2352,6 +2195,22 @@ Retrieve a list of supported currencies.
 ### Get Active Sales Agreements [GET]
 
 Retrieve a list of active sales agreements.
+
+#### Response description
+
+|Field|Description|
+|---|---|
+|name|Name of the sales agreement|
+|from|Date from which the sales agreement takes effect|
+|to|Date that the sales agreement expires|
+|products|Products in the sales agreement|
+|product[id]|The ID of the product|
+|product[providerId]|The provider ID that provides this product|
+|product[providerName]|The name of the provider offering this product|
+|product[title]|The name of the sales agreement|
+|product[quantity]|How many of this product is available in this agreement|
+|product[price]|The sales price of the product as part of this sales agreement|
+|product[fullPrice]|The original price of the product|
 
 + Response 200 (application/xml)
 
