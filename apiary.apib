@@ -181,7 +181,7 @@ Updates an order, setting currency, address, orderlines etc. It is only possible
                 <paymentType>full</paymentType>
                 <isCompleted>1</isCompleted>
                 <isCancelled>0</isCancelled>
-             <isReady>1</isReady>
+                <isReady>1</isReady>
                 <receipt></receipt>
                 <cost>1000</cost>
                 <address id="53">
@@ -202,6 +202,7 @@ Updates an order, setting currency, address, orderlines etc. It is only possible
                             <latitude>57.024961</latitude>
                             <longitude>9.940118</longitude>
                         </coords>
+                        <comment></comment>
                         <ticketIdentities>
                             <ticketIdentity id="39194">
                                 <type>barcode</type>
@@ -267,6 +268,7 @@ Updates an order, setting currency, address, orderlines etc. It is only possible
                         "orderLinePackageId":null,
                         "orderLines":null,
                         "coords":{"latitude":57.024961,"longitude":9.940118},
+                        "comment:" "",
                         "ticketIdentities":[
                             {
                                 "id":39194,
@@ -340,7 +342,7 @@ Retrieves all the information about the order, including order details, currency
                 <paymentType>full</paymentType>
                 <isCompleted>1</isCompleted>
                 <isCancelled>0</isCancelled>
-             <isReady>1</isReady>
+                <isReady>1</isReady>
                 <receipt></receipt>
                 <cost>1000</cost>
                 <address id="53">
@@ -378,6 +380,10 @@ Retrieves all the information about the order, including order details, currency
                         <!-- Only applicable to booking products -->
                         <start>2014-07-19T00:00:00+02:00</start>
                         <end>2014-07-20T00:00:00+02:00</end>
+                        <allowOrderlineComment>1</allowOrderlineComment>
+                        <commentPlaceholder>Write comment</commentPlaceholder>
+                        <comment>Comment on the orderline</comment>
+                        <orderLines><!-- Collection of sub order lines --></orderLines>
                     </orderLine>
                 </orderLines>
                 <orderFees>
@@ -449,7 +455,10 @@ Retrieves all the information about the order, including order details, currency
                                 "barcodeType":"EAN13",
                                 "orderLineId":39218
                             }
-                        ]
+                        ],
+                        "allowOrderlineComment": 1,
+                        "commentPlaceholder": "Write comment here",
+                        "comment": ""
                     }
                ],
                "orderFees":[
@@ -695,6 +704,9 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
                 <product id="9" ver="5" providerId="8">
                     <insertTime>2013-02-07T13:51:43+01:00</insertTime>
                     <salesEmail>khe@netimage.dk</salesEmail>
+                    <modifiedTime>2015-11-26T11:36:01+01:00</modifiedTime>
+                    <isFree>0</isFree>
+                    <allowOrderlineComment>1</allowOrderlineComment>
                     <coords>
                         <latitude>57.024961</latitude>
                         <longitude>9.940118</longitude>
@@ -708,6 +720,7 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
                     <intervalMin>1</intervalMin>
                     <intervalMax>1</intervalMax>
                     <type>booking</type>
+                    <commentPlaceholder>Kommenter på dette testprodukt</commentPlaceholder>
                     <providerName>Test udbyder</providerName>
                     <images>
                         <image>
@@ -720,6 +733,9 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
                 <product id="10" ver="2" providerId="9">
                     <insertTime>2013-02-07T13:57:29+01:00</insertTime>
                     <salesEmail>khe@netimage.dk</salesEmail>
+                    <modifiedTime>2015-11-26T11:36:01+01:00</modifiedTime>
+                    <isFree>0</isFree>
+                    <allowOrderlineComment>1</allowOrderlineComment>
                     <title>1 dags leje af voksencykel (herre)</title>
                     <intro>&lt;p&gt;&#xD;Beskrivelse af den fine herrecykel&lt;/p&gt;</intro>
                     <description>&lt;p&gt;&#xD;L&amp;aelig;ngere beskrivelse af cyklen.&lt;/p&gt;</description>
@@ -729,6 +745,7 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
                     <intervalMin>1</intervalMin>
                     <intervalMax>1</intervalMax>
                     <type>booking</type>
+                    <commentPlaceholder>Kommenter på dette testprodukt</commentPlaceholder>
                     <providerName>Test udbyder</providerName>
                     <images>
                         <image>
@@ -752,11 +769,9 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
                 <product id="34" ver="3" providerId="6">
                     <insertTime>2013-02-27T09:52:39+01:00</insertTime>
                     <salesEmail>lan@visitnordsjaelland.com</salesEmail>
-                    <modifiedTime>
-                        <date>2013-10-16 13:27:17</date>
-                        <timezone_type>1</timezone_type>
-                        <timezone>+02:00</timezone>
-                    </modifiedTime>
+                    <modifiedTime>2015-11-26T11:36:01+01:00</modifiedTime>
+                    <isFree>0</isFree>
+                    <allowOrderlineComment>1</allowOrderlineComment>
                     <title>Hytte</title>
                     <intro>
                         <p>Dejlig hytte til 4 personer</p>
@@ -826,6 +841,9 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
                         "providerId":8,
                         "insertTime":"2013-02-07T13:51:43+01:00",
                         "salesEmail":"khe@netimage.dk",
+                        "modifiedTime": "2015-11-26T11:36:01+01:00",
+                        "isFree": 0,
+                        "allowOrderlineComment": 1,
                         "coords":{"latitude":57.024961,"longitude":9.940118},
                         "externalUrl":null,
                         "title":"Entre p\u00e5 Gilleleje Museum - 1 voksen",
@@ -837,6 +855,7 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
                         "intervalMin":1,
                         "intervalMax":1,
                         "type":"booking",
+                        "commentPlaceholder": "Kommenter på dette testprodukt",
                         "providerName":"Test udbyder",
                         "images":[
                             {
@@ -977,6 +996,8 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
             <product xmlns="http://netimage.dk/pcm/channel/product" id="9" ver="5" providerId="8">
                 <insertTime>2013-02-07T13:51:43+01:00</insertTime>
                 <salesEmail>khe@netimage.dk</salesEmail>
+                <isFree>0</isFree>
+                <allowOrderlineComment>1</allowOrderlineComment>
                 <coords>
                     <latitude>57.024961</latitude>
                     <longitude>9.940118</longitude>
@@ -991,6 +1012,8 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
                 <intervalMin>1</intervalMin>
                 <intervalMax>1</intervalMax>
                 <type>booking</type>
+                <canonicalUrl></canonicalUrl>
+                <commentPlaceholder>Kommenter på dette testprodukt</commentPlaceholder>
                 <providerName>Test udbyder</providerName>
                 <images>
                     <image>
@@ -1011,6 +1034,9 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
                 "providerId":8,
                 "insertTime":"2013-02-07T13:51:43+01:00",
                 "salesEmail":"khe@netimage.dk",
+                "modifiedTime": "2015-11-26T11:36:01+01:00",
+                "isFree": 0,
+                "allowOrderlineComment": 1,
                 "coords":{"latitude":57.024961,"longitude":9.940118},
                 "hasInventory": true,
                 "externalUrl":null,
@@ -1023,6 +1049,7 @@ Retrieve a list of products matching search criteria. Multiple optional paramete
                 "intervalMin":1,
                 "intervalMax":1,
                 "type":"booking",
+                "commentPlaceholder": "Kommenter på dette testprodukt",
                 "providerName":"Test udbyder",
                 "images":[
                     {
