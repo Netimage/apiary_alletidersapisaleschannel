@@ -153,6 +153,7 @@ Updates an order, setting currency, address, orderlines etc. It is only possible
     + channel (string, required) - The name of the channel.
     + currency: `EUR` (string, optional) - The currency to use in ISO 4217 format
         + Default: `DKK`
+    + discountCode: ((string, optional)) - A discount code that can give discounts on order products
     + format: `xml` (string, optional) - Either json or xml.
         + Default: `json`
 
@@ -352,6 +353,16 @@ Retrieves all the information about the order, including order details, currency
                     <city>Test</city>
                     <email>dtr@netimage.dk</email>
                 </address>
+                <discountCode>
+                    <usage orderLineId="764">
+                        <usageId>60</usageId>
+                        <discountCodeId>14</discountCodeId>
+                        <discountedAmount>2000</discountedAmount>
+                        <completed>0</completed>
+                        <code>DC2016</code>
+                        <currencyId>1</currencyId>
+                    </usage>
+                 </discountCode>
                 <orderLines>
                     <orderLine id="764" productId="10">
                         <title>1 dags leje af voksencykel (herre)</title>
@@ -409,6 +420,17 @@ Retrieves all the information about the order, including order details, currency
                 "isCancelled":false,
                 "receipt":null,
                 "currency":"DKK",
+                "discountCode":[
+                    {
+                    "usageId":60,
+                    "discountCodeId": 14,
+                    "orderLineId": 764,
+                    "discountedAmount": 2000,
+                    "completed": 0,
+                    "code": "DC2016",
+                    "currencyId":1
+                    }
+               ],
                 "paymentType":"full",
                 "address":{
                     "id":53,
